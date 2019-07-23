@@ -1,0 +1,92 @@
+---
+title: "Hopkins - Introduction to R"
+author: "Scott Bailey"
+date: "7/23/2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Setup
+
+
+## Data Analysis with R
+
+```{r}
+library(tidyverse)
+library(readxl)
+```
+
+```{r}
+phylum_data <- read_excel("Cobble2012.xlsx", sheet = "Phylum")
+
+head(phylum_data, n=10)
+```
+
+```{r}
+summary(phylum_data)
+```
+
+What data are we getting from this summary?
+
+```{r}
+glimpse(phylum_data)
+```
+
+We can see that the data was read with the correct data types here. The taxonomy column is a character vector, while the rest of the columns are doubles, or double precision floating point numbers. If we wanted to treat these numbers specifically as integers, we could do that, but R is actually pretty good at handling converstion from floating point to integer as needed. 
+
+One of the first things that we can do to start understanding data is to start graphing it. Why don't we see if we can graph the occurences of a given taxon across the different sites. We'll start by filtering our data to just the row we're interested in. When we do that, we'll interest a new operator, the pipe (%>%), as well as one of the verbs we can use with our data by way of tidyverse.
+
+```{r}
+filter(phylum_data, taxonomy == "Annelida")
+```
+
+This is a fine way to write this code, but much of the R community has switched to using the pipe operate, so let's rewrite.
+
+```{r}
+phylum_data %>%
+  filter(taxonomy == "Annelida")
+```
+
+It might help to transpose the data so that we have many columns but only one row. Instead of using a traditional transposition, we're going to use the `gather` verb to convert from a wide format to a long format. We'll also save this data to a variable so it's easier to use.
+
+```{r}
+annelida <- phylum_data %>%
+  filter(taxonomy == "Annelida") %>% 
+  gather("location", "value", -taxonomy)
+```
+
+```{r}
+annelida %>%
+  ggplot(aes(x=location, y=value)) +
+  geom_col()
+```
+
+We'll worry about the colors, labels, and such later on. For now it's enough to see that we can pretty easily create graphs to start exploring the data. 
+
+Let's step back for a minute to our original data. What if we only cared about a certain location, say HMS. Let's restrict the data we look at to just that location. We'll use a new verb: select. 
+
+```{r}
+hms_data <- phylum_data %>%
+  select(taxonomy, HMS_10, HMS_20, HMS_30)
+
+hms_data
+```
+
+We can explicitly name each column we want or don't want, or we could use some helper functions. 
+
+```{r}
+hms_data <- phylum_data %>%
+  select(taxonomy, starts_with("HMS"))
+
+hms_data
+```
+
+
+
+
+
+TODO: Heat map of all taxa and locations
+
