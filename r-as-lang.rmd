@@ -1,0 +1,179 @@
+---
+title: "R - map and control flow"
+author: "Scott Bailey"
+date: "7/23/2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+In this workshop, we're going to switch our approach a bit. Instead of working purely within the tidyverse approach to working with data, we'll look at how R implements some standard features of programming languages. Particularly, we'll look at control flow and writing your own functions. We will be integrating these features into the same types of programs we were working with in our first workshop. 
+
+Let's start with control flow. The basic form of control flow in many programming languages is an if/else block. We provide some condition, and if the program satisfies that, we do one thing. If it doesn't, the program does something else. 
+
+```{r}
+counter <- 0
+
+if (counter > 5) {
+  print("The counter is greater than 5")
+} else {
+  print("The counter is less than or equal to 5")
+}
+
+```
+
+If we have multiple conditions, we can use if/else if.
+
+```{r}
+counter <- 7
+
+if (counter < 5) {
+  print("The counter is less than 5")
+} else if (counter > 5 && counter < 10){
+  print("The counter is greater than 5 and less than 10")
+} else {
+  print("Who knows what the counter is at?")
+}
+
+```
+
+Before using this specifically, let's look at a variation on it that's a tidyverse equivalent, and is meant specifically to operate on vectors.
+
+```{r}
+x <- c(1:10)
+
+case_when(
+  x < 5 ~ print("x is less than 5"),
+  x == 5 ~ print("x is 5"),
+  x > 5 ~ print("x is greater than 5")
+)
+```
+
+How could we actually use this? Let's pull our data from this morning back in, and we'll create a new column in our data frame based on another column and a condition. We'll come back to a use for the if/else syntax once we learn for loops. 
+
+```{r}
+phylum_data <- read_excel("Cobble2012.xlsx", sheet = "Phylum")
+
+head(phylum_data, n=10)
+```
+
+We'll create a new column that just says whether the observation is more or less than the average for a specific location/depth. 
+
+```{r}
+mean_HMS10 <- mean(phylum_data$HMS_10)
+
+phylum_data <- phylum_data %>%
+  mutate(above_HMS_10_difference = case_when(
+    HMS_10 < mean_HMS10 ~ FALSE,
+    HMS_10 >= mean_HMS10 ~ TRUE
+  ))
+
+head(phylum_data)
+```
+
+Anytime we're trying to create some new value based on a set of conditions, we can use if/else blocks or a case_when approach alongside mutate.
+
+Let's switch over to for loops and some of the alternatives in R. 
+
+Here's the basic for loop syntax.
+
+```{r}
+x <- c(1:10)
+
+for (value in x) {
+  print(value)
+}
+```
+
+When we think about a dataframe, each of those columns is a vector, so we can iterate over those. 
+
+```{r}
+for (value in phylum_data$taxonomy) {
+  print(value)
+}
+```
+ 
+Let's combine this for loop with our if/else statement. We'll iterate over a vector of numbers, and depending on the value, modify it in one way or another. This isn't efficient R code, but it works. That said, you should avoid it.
+
+```{r}
+x <- c(1:10)
+# we're going to predetermine the length of the vector make it a bit faster
+empty <- c(length(x))
+
+for (value in x) {
+  if(value < 5) {
+    empty <- c(empty, value + 1)
+  } else {
+    empty <- c(empty, value - 1)
+  }
+}
+
+empty
+```
+
+Why is this slow code? When you modify a value in a for loop, it copies the value over each iteration. R is faster when it works on vectors as a whole rather than single values from a vector at a time. How would we rewrite this so that it takes advantage of vectorized code?
+
+To do this, we first need to learn to write functions. Here's the basic syntax:
+
+```{r}
+add_one <- function(x) {
+  return (x + 1)
+}
+
+add_one(5)
+```
+
+If we want to combine the function and if/else:
+
+```{r}
+add_one_if <- function(x) {
+  if(x < 5) {
+    return (x + 1)
+  } else {
+    return (x)
+  }
+}
+
+add_one_if(4)
+```
+
+Let's go back to the situation where we create a new vector from an existing vector given some function. We'll use a variant on the `map` function, which applies a function to some data structure, such as a vector.
+
+```{r}
+x <- c(1:10)
+
+y <- map_dbl(x, add_one_if)
+
+y
+```
+
+Notice something here - we have to determine which `map` function to use based on what type of values we're processing and want back. We'll treat all of these numbers as doubles, so use `map_dbl`. For all the map functions, see https://purrr.tidyverse.org/. In base R, there is a similar set of functions, the `apply` functions. See here: https://www.r-bloggers.com/apply-lapply-rapply-sapply-functions-in-r/.
+
+In most cases, rather than using a for loop, we want to work with our data so that a map or apply function will work. Within the context of a dataframe, we can typically use mutate and a function. 
+
+Let's take this knowledge back to our phylum data and see how we could use it. 
+
+First, let's create a new column in our dataset by applying a function to all the values from another column. 
+
+```{r}
+phylum_data <- phylum_data %>%
+  mutate(lowercase_taxa = str_to_lower(taxonomy))
+
+head(phylum_data)
+```
+
+Here we applied a built in function that operates on strings, `str_to_lower`. If we wanted to scale the values in a column in some way, we could do something similar. 
+
+```{r}
+phylum_data <- phylum_data %>%
+  mutate(log_HMS10 = log(HMS_10))
+
+head(phylum_data)
+```
+
+I'm not sure why we would scale our observations this way, but we could. 
+
+TODO: iterate over all taxa in phylum data and create charts...
+TODO: boxplots for all locations?
