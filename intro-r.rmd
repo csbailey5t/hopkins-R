@@ -84,9 +84,61 @@ hms_data <- phylum_data %>%
 hms_data
 ```
 
+What if we want to then add all the values for all the depths and put that data into a new column? For that, we'll use the mutate verb. 
 
+```{r}
+hms_data <- hms_data %>%
+  mutate("HMS_total" = HMS_10 + HMS_20 + HMS_30)
+
+hms_data
+```
+
+You can use mutate to create a new column based on other columns or other data, or to modify a column in place.
+
+What if we now want to know which taxon had the largest number of occurences across all depths?
+
+```{r}
+hms_data %>%
+  arrange(desc(HMS_total))
+```
+
+We've learned most of the verbs that we get with dplyr, the data manipulation part of tidyverse. Combining these verbs together you can do quite a lot with your data. Let's return to our full data again, and think about other questions we can ask of it. 
+
+Just to remind us of what it looks like:
+
+```{r}
+head(phylum_data, n=10)
+```
+
+What if we just wanted to visualize this as is? How could we graphically represent these observations?
+
+What if we tried a heat map? We'll need to reshape our data. We need our data such that each observation has a column for the site, the taxon, and the value. 
+
+```{r}
+phylum_long <- phylum_data %>%
+  gather("location", "value", HMS_10:Pt.Pinos_40)
+
+phylum_long %>% 
+  ggplot(aes(x = location, y = taxonomy, fill = value)) +
+  geom_tile() +
+  geom_text(aes(label = value), color = "white", size = 2) +
+  theme(axis.text.x = element_text(angle = -90)) +
+  ggtitle("Heatmap of taxon observations")
+```
 
 
 
 TODO: Heat map of all taxa and locations
+
+TODO: try to determine whether the depth or the location seems most important in grouping observations.
+
+```{r}
+cor(phylum_data$HMS_10, phylum_data$HMS_20, method = "pearson")
+cor(phylum_data$HMS_10, phylum_data$LovP_30)
+
+phylum_data %>%
+  select(-taxonomy) %>%
+  cor()
+```
+
 
