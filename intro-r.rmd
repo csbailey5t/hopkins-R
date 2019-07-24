@@ -63,12 +63,27 @@ With our data in the shape we'd like it, we can now send that data to ggplot to 
 ```{r}
 annelida %>%
   ggplot(aes(x=location, y=value)) +
-  geom_col()
+  geom_col() +
+  theme(axis.text.x = element_text(angle = -45))
 ```
 
-We'll worry about the colors, labels, and such later on. For now it's enough to see that we can pretty easily create graphs to start exploring the data. 
+Let's do one more thing with this to make it a bit more informatiave. Let's add a horizontal mean line so that we can tell which locations and depths have more or less than the average. 
 
-Let's do one more similar task. Let's suppose that we want to graph all the taxa at a specific location and depth. 
+```{r}
+mean_annelida <- mean(annelida$value)
+
+annelida %>%
+  ggplot(aes(x=location, y=value)) +
+  geom_col() +
+  theme(axis.text.x = element_text(angle = -45)) +
+  geom_hline(aes(yintercept = mean_annelida), color = "red")
+```
+
+Instead of thinking about this as just how to add a horizontal line, think about this as how to add an arbitrary line to your graph. It could be at any valuable that's meaningful in your presentation. 
+
+We'll worry about the colors, labels, and such later on. For now it's enough to see that we can pretty easily create graphs to start exploring the data and communicating something about it. 
+
+Let's do one more similar task for practice. Let's suppose that we want to graph all the taxa at a specific location and depth. What do you think our steps are? Do we need to reshape the data this time?
 
 ```{r}
 phylum_data %>%
@@ -156,5 +171,3 @@ phylum_data %>%
 ```
 
 TODO: Boxplot for locations
-TODO: bar graph for all taxon at a location
-TODO: mean line for taxon at location

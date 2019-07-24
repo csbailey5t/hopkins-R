@@ -9,6 +9,12 @@ output: pdf_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+```{r}
+library(tidyverse)
+library(readxl)
+```
+
+
 In this workshop, we're going to switch our approach a bit. Instead of working purely within the tidyverse approach to working with data, we'll look at how R implements some standard features of programming languages. Particularly, we'll look at control flow and writing your own functions. We will be integrating these features into the same types of programs we were working with in our first workshop. 
 
 Let's start with control flow. The basic form of control flow in many programming languages is an if/else block. We provide some condition, and if the program satisfies that, we do one thing. If it doesn't, the program does something else. 
@@ -175,5 +181,50 @@ head(phylum_data)
 
 I'm not sure why we would scale our observations this way, but we could. 
 
-TODO: iterate over all taxa in phylum data and create charts...
-TODO: boxplots for all locations?
+Let's apply this idea of iteration a bit differently to create multiple charts at a time. First, create a new folder in your direction called `plots`. 
+
+First, we'll write code to create a bar graph to visualize the distribution of a taxon across locations, then move it into a function. We'll then use iteration to create multiple graphs. 
+
+```{r}
+phylum_data %>%
+  filter(taxonomy == "Annelida") %>% 
+  select(-above_HMS_10_difference, -lowercase_taxa, -log_HMS10) %>%
+  gather("location", "value", -taxonomy) %>%
+  ggplot(aes(x=location, y=value)) +
+  geom_col() +
+  theme(axis.text.x = element_text(angle = -45))
+```
+
+Let's write a function now that takes a dataframe and the name of a taxon, then buids a graph and saves it. We will have to remove some columns we've added as we've been working.
+
+```{r}
+library(glue)
+
+create_graph <- function(df, taxon) {
+  taxon_plot <- df %>%
+    filter(taxonomy == taxon) %>% 
+    select(-above_HMS_10_difference, -lowercase_taxa, -log_HMS10) %>%
+    gather("location", "value", -taxonomy) %>%
+    ggplot(aes(x=location, y=value)) +
+    geom_col() +
+    theme(axis.text.x = element_text(angle = -45)) +
+    ggtitle(glue("{taxon} across locations"))
+  
+  ggsave(glue("plots/{taxon}.png"), taxon_plot)
+}
+
+create_graph(phylum_data, "Annelida")
+```
+
+Now that we know our function works, let's run it for all taxa. 
+
+```{r}
+taxa <- unique(phylum_data$taxonomy)
+
+for (taxon in taxa) {
+  create_graph(phylum_data, taxon)
+}
+  
+```
+
+
