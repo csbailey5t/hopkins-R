@@ -35,15 +35,15 @@ What data are we getting from this summary?
 glimpse(phylum_data)
 ```
 
-We can see that the data was read with the correct data types here. The taxonomy column is a character vector, while the rest of the columns are doubles, or double precision floating point numbers. If we wanted to treat these numbers specifically as integers, we could do that, but R is actually pretty good at handling converstion from floating point to integer as needed. 
+We can see that the data was read with the correct data types here. The taxonomy column is a character vector, while the rest of the columns are doubles, or double precision floating point numbers. If we wanted to treat these numbers specifically as integers, we could do that, but R is actually pretty good at handling converstion from floating point to integer as needed. Since the taxa are finite and unique, we could treat those as factors, or categorical variables, but we can worry about that if we need to do an analysis where it's important.
 
-One of the first things that we can do to start understanding data is to start graphing it. Why don't we see if we can graph the occurences of a given taxon across the different sites. We'll start by filtering our data to just the row we're interested in. When we do that, we'll interest a new operator, the pipe (%>%), as well as one of the verbs we can use with our data by way of tidyverse.
+One of the first things that we can do to start understanding data is to start graphing it. Why don't we see if we can graph the occurences of a given taxon across the different sites. We'll start by filtering our data to just the row we're interested in. When we do that, we'll interest a new operator, the `pipe` (`%>%`), as well as one of the verbs we can use with our data by way of tidyverse, `filter`.
 
 ```{r}
 filter(phylum_data, taxonomy == "Annelida")
 ```
 
-This is a fine way to write this code, but much of the R community has switched to using the pipe operate, so let's rewrite.
+This is a fine way to write this code, but much of the R community has switched to using the pipe operator, so let's rewrite.
 
 ```{r}
 phylum_data %>%
@@ -58,6 +58,8 @@ annelida <- phylum_data %>%
   gather("location", "value", -taxonomy)
 ```
 
+With our data in the shape we'd like it, we can now send that data to ggplot to graph. Pay attention to the switch from the pipe operator connecting lines to the plus sign.
+
 ```{r}
 annelida %>%
   ggplot(aes(x=location, y=value)) +
@@ -65,6 +67,19 @@ annelida %>%
 ```
 
 We'll worry about the colors, labels, and such later on. For now it's enough to see that we can pretty easily create graphs to start exploring the data. 
+
+Let's do one more similar task. Let's suppose that we want to graph all the taxa at a specific location and depth. 
+
+```{r}
+phylum_data %>%
+  select(taxonomy, HMS_10) %>%
+  ggplot(aes(x = taxonomy, y = HMS_10)) +
+  geom_col() +
+  theme(axis.text.x = element_text(angle = -90))
+```
+
+
+
 
 Let's step back for a minute to our original data. What if we only cared about a certain location, say HMS. Let's restrict the data we look at to just that location. We'll use a new verb: select. 
 
@@ -102,6 +117,8 @@ hms_data %>%
   arrange(desc(HMS_total))
 ```
 
+TODO: graph this in descending order.
+
 We've learned most of the verbs that we get with dplyr, the data manipulation part of tidyverse. Combining these verbs together you can do quite a lot with your data. Let's return to our full data again, and think about other questions we can ask of it. 
 
 Just to remind us of what it looks like:
@@ -127,9 +144,6 @@ phylum_long %>%
 ```
 
 
-
-TODO: Heat map of all taxa and locations
-
 TODO: try to determine whether the depth or the location seems most important in grouping observations.
 
 ```{r}
@@ -141,4 +155,6 @@ phylum_data %>%
   cor()
 ```
 
-
+TODO: Boxplot for locations
+TODO: bar graph for all taxon at a location
+TODO: mean line for taxon at location
