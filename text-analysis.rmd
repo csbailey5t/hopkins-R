@@ -162,7 +162,7 @@ tidy_interviews_clean %>%
 
 What do you see here? And what would you consider doing about it?
 
-For now, let's not worry too much about it. We'll proceed with some analysis and then figure out whether we need to go back and clean further. 
+For now, let's not worry too much about it. We'll proceed with some visualiation and analysis and then figure out whether we need to go back and clean further. 
 
 Since graphs are always nice, let's make a quick graph with ggplot to show these most frequent words. We do have to use `mutate` and `reorder` to make sure that ggplot respects the sorting of the words.
 
@@ -175,6 +175,57 @@ tidy_interviews_clean %>%
   geom_col(fill = "gray") +
   coord_flip() + # This helps with reading the words.
   ggtitle("Words mentioned more than 500 times")
+```
+
+If we were interested in just a single interview, we could always filter down to that and then graph. 
+
+```{r}
+tidy_interviews_clean %>% 
+  filter(doc_id == "AndresenRuth_1stInterview_transcript.txt") %>%
+  count(word) %>%
+  filter(!word %in% c("andresen", "ruth", "john", "tim", "thomas")) %>%
+  filter(n > 10) %>%
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(x = word, y = n)) +
+  geom_col(fill = "gray") +
+  coord_flip()
+```
+
+Computational text analysis doesn't always mean working with big data or large corpora at scale. Sometimes it's just a useful way to engage with individual documents, and understand some of the emphasis in each by looking at it just a bit differently.
+
+While the raw word counts are useful, within the context of a corpus, we often want to scale the word counts according to the number of words in each document. This gives us the term frequency, and a better sense of the importance of words per document. 
+
+```{r}
+tidy_interviews_clean %>%
+  count(doc_id, word, sort = TRUE)  %>%  # count words for each doc
+  group_by(doc_id) %>% # group docs together
+  mutate(n_tot = sum(n), # count total number of words per doc
+         term_freq = n/n_tot)
+```
+
+We can see that the names are really starting to be a bit of problem, so let's remove them. 
+
+```{r}
+split_names <- function(name) {
+  chunks <- str_split_fixed(name, "_", 2)
+  mod_string <- gsub("([[:upper:]])", " \\1", chunks[,1])
+  first_last <- str_split_fixed(str_trim(mod_string, side="left"), " ", 2)
+  return(c(first_last))
+}
+
+split_names("SchroederPaul_transcript.txt")
+
+names <- map(interviews$doc_id, split_names)
+names_flat <- unlist(names)
+names_flat_lower <- unlist(map(names_flat, str_to_lower))
+names_flat_lower
+```
+
+```{r}
+tidy_interviews_clean <- tidy_interviews_clean %>%
+  filter(!word %in% names_flat_lower)
+
+tidy_interviews_clean
 ```
 
 
