@@ -1,0 +1,68 @@
+---
+title: "Text analysis in R"
+author: "Scott Bailey"
+date: "7/23/2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(tidytext)
+library(readtext)
+```
+
+The texts we're going to work with are a set of interviews from here at Hopkins. You can download them from here: 
+
+During our workshop, we're going to work through a standard workflow in text analysis: read in texts, organize them, clean them, and analyze them.
+
+We'll use a special package, `readtext`, to read the texts in by passing in the directory.
+
+```{r}
+interviews_raw <- readtext("plain_text")
+
+head(interviews_raw)
+```
+
+To understanding how we need to clean the texts, we need to take a close look at one of them. One of the first things we can see is that the text is extraordinarily clean. It's re-keyed text or a corrected transcript, rather than OCR, so we don't need to clean or handle misspellings or strange characters having come in by way of the OCDR process. 
+
+We should also notice that there is front-matter to teach text file, with information about the interview. If we look at several of these, we'll see that they take a different number of lines in different files, which is important.If we're wanting to do semantic analysis of the text, though, we probably want to pull out the front matter, though if you have a large enough corpus some of that information would wash out in the analysis. 
+
+The last thing to observe is that, for the most part, each line in the file represents a switch in person speaking, and each line has the person speaking identified at the front of the line. This isn't always the case, but it helps we want to analyze these files in terms of what the interview says vs what the interviewee says. 
+
+Let's start by splitting the front-matter from the interview itself. Can anyone suggest a way to do this?
+
+```{r}
+interviews <- interviews_raw %>%
+  separate(text, c("series_title", "front_matter", "interview"), "\n\n", extra="merge")
+
+head(interviews)
+```
+
+Separate allows us to split a column into multiple columns based on some character pattern. We have to specific the `extra` parameter so that we control what happens when separate would create more columns than we want, i.e., when there are more characters that satisfy our pattern than we want.
+
+Now we can do a bit of cleaning. Let's remove the word "INTERVIEW" since that doesn't meaningfully contribute to our analysis. 
+
+```{r}
+interviews <- interviews %>%
+  mutate(interview = str_replace_all(interview, "INTERVIEW", ""))
+
+head(interviews)
+```
+
+Since the Bill Austin interview is notes from the interview rather than a transcript, let's drop it from our analysis. We want our documents to all be roughly the same in format. 
+
+
+```{r}
+interviews <- interviews %>%
+  filter(!doc_id == "AustinBill_phoneInterview.txt")
+
+head(interviews)
+```
+
+
+TODO: make data frame from documents where each interview chunk is a row in the dataframe.
+
