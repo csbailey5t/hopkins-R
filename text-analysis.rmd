@@ -37,7 +37,7 @@ Let's start by splitting the front-matter from the interview itself. Can anyone 
 
 ```{r}
 interviews <- interviews_raw %>%
-  separate(text, c("series_title", "front_matter", "interview"), "\n\n", extra="merge")
+  separate(text, c("series_title", "front_matter", "text"), "\n\n", extra="merge")
 
 head(interviews)
 ```
@@ -48,7 +48,7 @@ Now we can do a bit of cleaning. Let's remove the word "INTERVIEW" since that do
 
 ```{r}
 interviews <- interviews %>%
-  mutate(interview = str_replace_all(interview, "INTERVIEW", ""))
+  mutate(text = str_replace_all(text, "INTERVIEW", ""))
 
 head(interviews)
 ```
@@ -62,6 +62,121 @@ interviews <- interviews %>%
 
 head(interviews)
 ```
+
+Now that we have our data mostly standardized, let's start asking some questions about it. 
+
+How many times is Hopkins mentioned in each interview?
+
+```{r}
+interviews %>%
+  pull(text) %>% # pull extracts just that column vector
+  str_count("Hopkins")
+```
+
+We got back a vector here, so we could assign that to a variable and do whatever calculations on it we want to. Or, we could create a new column in our dataset with that information for any words we are particularly interested in.
+
+Let's do something smiilar, but with how many words are in each interview.
+
+```{r}
+interviews <- interviews %>%
+  mutate(n_words = str_count(text, boundary("word")))
+
+head(interviews)
+```
+
+The `boundary` parameter lets us choose some time of entity to count by. Along with words, it can count thinks like characters, sentences, and line breaks. 
+
+There are quite a function string functions in the `stringr` library, where we've gotten `str_count` and `str_replace_all`. We'll come back to some of those, but for now, let's jump into a bit more analysis by shifting to working with the `tidytext` library. 
+
+First, we're going to shift our data into a tidy format.
+
+```{r}
+tidy_interviews <- interviews %>%
+  unnest_tokens(word, text) %>%
+  select(doc_id, word)
+
+tidy_interviews
+```
+
+What's happenened to our data? What changes do you see?
+
+At the same time that the `unnest_tokens` function tokenizes the text, it also lowercases everything and removes punctuation. We can set some parameters to affect this if we don't want all of that to happen. 
+
+```{r}
+interviews %>%
+  unnest_tokens(word, text, to_lower = FALSE, strip_punct = FALSE)
+```
+
+We can also tokenize at different levels other than words, such as sentences or ngrams. 
+
+```{r}
+interviews %>%
+  unnest_tokens(sentence, text, token = "sentences") %>%
+  select(doc_id, sentence)
+```
+
+```{r}
+interviews %>%
+  unnest_tokens(bigrams, text, token = "ngrams", n = 2) %>%
+  select(doc_id, bigrams)
+```
+
+We're going to stick with our word level tokenization for now, and keep moving. Once of the most common things we do in text analysis is just counting words. Working with our text in a tidy fashion makes that easy.
+
+```{r}
+tidy_interviews %>% 
+  count(word)
+```
+
+One of the first things we notice is that there are a lot of numbers. We could pull those out if we want, but let's leave them for the moment in case some pop up with high frequency and we want to investigate. Let's reorder the counts though so we can see the most common words. 
+
+```{r}
+tidy_interviews %>% 
+  count(word) %>%
+  arrange(desc(n))
+```
+
+The results here shouldn't be too surprising. These are interviews, and whether we're speaking or writing, we often use lots of words like "the", "of", or "a". Let's remove these from our corpus so we have less noise. This is typically called stopword removal. 
+
+Tidytext provides a list of these common stopwords that we can use, though you can always define your own or modify an existing list. 
+
+```{r}
+stop_words
+```
+
+Since we're working in a tidyverse way, and both our data and these stopwords are in tibbles, we can use an `anti_join` on the two dataframes to return a tibble that contains all rows when there aren't matching values in the stopwords. Because we have the column "word" in both tibbles, we don't have to specify it. 
+
+```{r}
+tidy_interviews_clean <- tidy_interviews %>%
+  anti_join(stop_words)
+
+tidy_interviews_clean
+```
+
+Note that we went from almost 360,000 rows to only 120,000. That's a big reduction. Let's rerun our counts now. Instead of using `arrange`, which we used in earlier workshops, we can actually use a parameter in the `count` function.
+
+```{r}
+tidy_interviews_clean %>% 
+  count(word, sort = TRUE) 
+```
+
+What do you see here? And what would you consider doing about it?
+
+For now, let's not worry too much about it. We'll proceed with some analysis and then figure out whether we need to go back and clean further. 
+
+Since graphs are always nice, let's make a quick graph with ggplot to show these most frequent words. We do have to use `mutate` and `reorder` to make sure that ggplot respects the sorting of the words.
+
+```{r}
+tidy_interviews_clean %>% 
+  count(word) %>%
+  filter(n > 500) %>%
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(x = word, y = n)) +
+  geom_col(fill = "gray") +
+  coord_flip() + # This helps with reading the words.
+  ggtitle("Words mentioned more than 500 times")
+```
+
 
 
 TODO: make data frame from documents where each interview chunk is a row in the dataframe.
