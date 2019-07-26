@@ -56,6 +56,8 @@ It might help to transpose the data so that we have many columns but only one ro
 annelida <- phylum_data %>%
   filter(taxonomy == "Annelida") %>% 
   gather("location", "value", -taxonomy)
+
+annelida
 ```
 
 With our data in the shape we'd like it, we can now send that data to ggplot to graph. Pay attention to the switch from the pipe operator connecting lines to the plus sign.
@@ -82,6 +84,7 @@ annelida %>%
 Instead of thinking about this as just how to add a horizontal line, think about this as how to add an arbitrary line to your graph. It could be at any valuable that's meaningful in your presentation. 
 
 We'll worry about the colors, labels, and such later on. For now it's enough to see that we can pretty easily create graphs to start exploring the data and communicating something about it. 
+
 
 Let's do one more similar task for practice. Let's suppose that we want to graph all the taxa at a specific location and depth. What do you think our steps are? Do we need to reshape the data this time?
 
@@ -155,6 +158,20 @@ phylum_long %>%
   theme(axis.text.x = element_text(angle = -90)) +
   ggtitle("Heatmap of taxon observations")
 ```
+
+Quick example of faceting. 
+
+```{r}
+phylum_data %>%
+  gather("location", "value", -taxonomy) %>%
+  ggplot(aes(x = taxonomy, y = value)) +
+  geom_col() + 
+  theme(axis.text.x = element_text(angle = -90)) +
+  facet_wrap(~location)
+
+```
+
+
 
 
 TODO: try to determine whether the depth or the location seems most important in grouping observations.
