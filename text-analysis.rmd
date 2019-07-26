@@ -2,17 +2,23 @@
 title: "Text analysis in R"
 author: "Scott Bailey"
 date: "7/23/2019"
-output: pdf_document
+output:
+  pdf_document: default
+  word_document: default
 ---
 
+The content of this workshop is heavily depending on a workshop that Claudia Engel and I put together and taught in Spring 2019, and which Claudia has further refined: https://cengel.github.io/R-text-analysis/. 
+
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = T, results="hide")
 ```
 
 ```{r}
 library(tidyverse)
 library(tidytext)
 library(readtext)
+library(tm)
+library(topicmodels)
 ```
 
 The texts we're going to work with are a set of interviews from here at Hopkins. You can download them from here: 
@@ -228,7 +234,107 @@ tidy_interviews_clean <- tidy_interviews_clean %>%
 tidy_interviews_clean
 ```
 
+Let's rerun our code to determine term frequencies:
 
+```{r}
+tidy_interviews_clean %>%
+  count(doc_id, word, sort = TRUE)  %>%  
+  group_by(doc_id) %>% 
+  mutate(n_tot = sum(n),
+         term_freq = n/n_tot) %>%
+  arrange(desc(term_freq))
+```
 
-TODO: make data frame from documents where each interview chunk is a row in the dataframe.
+We still have names here, but these are at least names mentioned by the interviewees rather than the names of the interviewees occuring at least in part because of name at the front of each line.
+
+Let's graph the distribution of words for a single document using a histogram. 
+
+```{r}
+tidy_interviews_clean %>%
+  filter(doc_id == "SilbersteinMark_transcript.txt") %>%
+  count(doc_id, word)  %>%  # count n for each word
+  group_by(doc_id) %>% 
+  mutate(n_tot = sum(n), # count total number of words per doc
+         term_freq = n/n_tot) %>% 
+  ggplot(aes(term_freq)) +
+    geom_histogram() 
+```
+
+This is what almost any distribution for a text will look like. Only a few words have a high term frequency, i.e., are highly used in that text. Most words are used in small numbers. 
+
+Term frequencies are helpful for us to understand what words might be important for a text. What if we want to understand what words are important for a text within the context of a corpus? For that, we can use tf-idf, or term frequency inverse document frequency. Tf-idf measures how important a word is within a corpus by scaling term frequency per document according to the inverse of the term’s document frequency (number of documents within the corpus in which the term appears divided by the number of documents).
+
+The tf-idf value will be:
+
+- lower for words that appear in many documents in the corpus, and lowest when the word occurs in virtually all documents.
+- high for words that appear many times in few documents in the corpus, this lending high discriminatory power to those documents.
+
+Since tf-idf is a common measure, `tidytext` supplies a convenient function for it. 
+
+```{r}
+tidy_interview_tfidf <- tidy_interviews_clean %>%
+  count(doc_id, word, sort = TRUE)  %>%  # aggregate to count n for each word
+  bind_tf_idf(word, doc_id, n) 
+
+tidy_interview_tfidf
+```
+
+You'll notice that in the process of calculating the tf-idf score for each word in each doc, the `bind_tf_idf` function also calculates the term frequency and inverse document frequency, which are necessary pieces. 
+
+Let's see which words in the corpus have the highest tf-idf scores. 
+
+```{r}
+tidy_interview_tfidf %>%
+  arrange(desc(tf_idf))
+```
+
+We still get quite a few names, but we can get a sense now of which words particular interviewees used much more than other interviewees. It might give us some information that we could use to follow up in the specific interview or that might help us understand prominent topics during a time period. 
+
+Let's look at how this tidytext approach can open to other analytical tools like topic modeling. 
+
+First, let's turn our corpus into a document term matrix. A DTM is a standard representation of a text as a matrix where each row represents a document, and each column represents a feature, in this case a word. The value at any given spot is typically the number of times that word occurs in the document. You can also build a document frequency matrix, which is the same but with a frequency rather than account. The types of representations are often used for machine learning. 
+
+Since this is fairly normal, `tidytext` provides a function to easily convert a tibble with doc_id, the word, and the count into a DTM. 
+
+```{r}
+interviews_dtm <- tidy_interviews_clean %>%
+  count(doc_id, word) %>%
+  cast_dtm(doc_id, word, n)
+
+interviews_dtm
+```
+
+Once we have a DTM, we can use just a lot of functions from the `tm` package, such as `findAssoc`, which lets us find correlated terms within a limit. 
+
+```{r}
+findAssocs(interviews_dtm, "marine", corlimit = 0.5)
+findAssocs(interviews_dtm, "science", corlimit = 0.5)
+```
+
+We don't really have enough texts for it, but with a DTM we can start to use topic modeling, which is, usually, an unsupervised machine learning model for uncovering latent semantic structures in a corpus. 
+
+```{r}
+# code adapted from https://www.tidytextmining.com/topicmodeling.html
+
+interviews_lda <- LDA(interviews_dtm, k=10)
+
+interview_topics <- tidy(interviews_lda, matrix = "beta")
+
+interviews_top_terms <- interview_topics %>%
+  group_by(topic) %>%
+  top_n(10, beta) %>%
+  ungroup() %>%
+  arrange(topic, -beta)
+
+head(interviews_top_terms)
+
+interviews_top_terms %>%
+  mutate(term = reorder(term, beta)) %>%
+  ggplot(aes(term, beta, fill = factor(topic))) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~ topic, scales = "free") +
+  coord_flip()
+```
+
+Our results here aren't great, because we have a small corpus and the interviews themselves may have a large amount of topical overlap. The idea, though, is that once we can convert our text corpus into certain formats, we're able to use that data for different types of modeling that can be really interesting. 
 
