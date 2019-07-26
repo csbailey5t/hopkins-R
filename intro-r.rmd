@@ -132,8 +132,6 @@ hms_data %>%
   arrange(desc(HMS_total))
 ```
 
-TODO: graph this in descending order.
-
 We've learned most of the verbs that we get with dplyr, the data manipulation part of tidyverse. Combining these verbs together you can do quite a lot with your data. Let's return to our full data again, and think about other questions we can ask of it. 
 
 Just to remind us of what it looks like:
@@ -170,4 +168,4 @@ phylum_data %>%
   cor()
 ```
 
-TODO: Boxplot for locations
+
