@@ -11,6 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Setup
 
+Follow instructions at https://cengel.github.io/R-intro/index.html#setup-instructions to set up R and RStudio.
 
 ## Data Analysis with R
 
